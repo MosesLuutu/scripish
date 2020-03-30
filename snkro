@@ -1,0 +1,48 @@
+#!/bin/bash
+#This script is designed to run mykrobe for both mtb and S.aureus plus snippy
+#Do fastq-dump
+echo "STARTING ON FASTQ-DUMP"
+for i in "$@"
+do
+echo "Running fastq-dump for $i"
+fastq-dump --split-3 --gzip $i
+echo "=================DONE WITH fastq-dump for $i========================="
+done
+echo -e "==================FASTQ-DUMP COMPLETE===========================================\n"
+#Do fastqc
+echo -e "Running fastqc NOW\n"
+for i in `ls *.gz`
+do
+echo "Running fastqc for $i"
+fastqc $i
+echo "========================DONE WITH fastqc for $i========================================="
+done
+echo "=======================FASTQC COMPLETE===================================================="
+#Do mykrobe
+echo "STARTING ON MYKROBE"
+for i in "$@"
+do
+echo "Running mykrobe for $i"
+mykrobe predict $i staph -1 ${i}_1.fastq.gz ${i}_2.fastq.gz --format csv --output ${i}.csv
+echo "=================DONE WITH MYKROBE FOR $i======================================"
+done
+echo "==============================MYKROBE COMPLETE========================================"
+#Convert csv to tab delimited
+echo "STARTING ON CONVERSION"
+for i in `ls *.csv`
+do
+echo "Converting $i"
+cut -d, -f1-3,12,13 $i | sed -e 's/,/\t\t/g' -e 's/"//g' -e '1d' | sed '1iSAMPLE ID\t\t  DRUG\t\t\
+SUSCEPTIBILITY\t\tSPECIES\t\tLINEAGE' > ${i}.tab
+echo "===========================DONE CONVERTING $i============================================="
+done
+echo "============================DONE WITH CONVERSION============================================="
+
+#Convert tab to pdf
+echo "Converting to pdfs now"
+for i in `ls *tab`
+do
+echo "Converting $i to pdf"
+enscript $i --output=- | ps2pdf - > ${i}.pdf
+echo "=============Done converting $i to pdf================================================"
+done
